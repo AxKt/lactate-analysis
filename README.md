@@ -1,1 +1,2 @@
 # lactate-analysis
+Analysing lactate tests is not a trivial task. Most of the time it is not very clear how the results (thresholds) have been obtained and what the underlying model was. This project aims at providing routines for exploring lactate-test time series.
