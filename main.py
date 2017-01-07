@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 import bokeh
 import datetime as dt
 import math
+import yaml
 
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter, FuncFormatter
+from matplotlib.ticker import MultipleLocator, FixedLocator, FormatStrFormatter, FuncFormatter
 
 #seaborn
 # create pandas data structure for handling the tests, speed in m/s and lactate in mmol/l
@@ -41,7 +42,7 @@ def pace_formatter(speed, pos = []): # second argument needed for plot formatter
     pace = speed_to_pace(speed)
     fractional_minutes, minutes = math.modf(pace)
     seconds = fractional_minutes * 60
-    return '{}:{}'.format(int(minutes), int(seconds)) 
+    return '{mm}:{ss:02d}'.format(mm = int(minutes), ss = int(round(seconds,1))) 
         
     
 v = np.array([4.8, 4.3, 3.88, 3.52, 3.35])
@@ -57,31 +58,146 @@ from test_protocols.step_test import StepTest
 
 test_1 = StepTest(v,l)
 test_1.fit_curve()
-vl4, sigma_vl4 = test_1.get_fixed_threshold(4)
+
+sigma_vl3 = test_1.get_fixed_threshold(3)
+vl4, vl2, sigma_vl2 = test_1.get_fixed_threshold(2)
+vl3,sigma_vl4 = test_1.get_fixed_threshold(4)
+
+plt.figure()
+plt.errorbar(1,vl4, xerr=0, yerr=sigma_vl4, fmt='.', color='black')
+plt.errorbar(1,vl3, xerr=0, yerr=sigma_vl3, fmt='.', color='black')
+plt.errorbar(1,vl2, xerr=0, yerr=sigma_vl2, fmt='.', color='black')
+plt.show()
+#fig.autofmt_xdate()
 
 #4.74
 #%%
 popt, pcov = sp.optimize.curve_fit(lactate_curve_function, v, l)
 
-curve_v = np.arange(min(v),max(v),0.05 )
+curve_v = np.arange(min(v),max(v),0.05)
 curve = lactate_curve_function(curve_v,popt[0], popt[1], popt[2])
 
 f = FuncFormatter(pace_formatter)
 
 fig, ax = plt.subplots()
 ax.set_xlabel("Geschwindigkeit [m/s]")
-#ax.xaxis.set_major_formatter(f)
-
-ax2 =ax.twiny()
-ax2.set_xbound(ax.get_xbound())
-ax2.set_xlabel("Tempo [min/km]")
+ax.set_ylabel("Laktat [mmol/l]")
 
 ax.plot(v,l,'o', linewidth = 2)
 ax.plot(curve_v, curve, linewidth = 2)
 
-#ax.xaxis.set_major_locator(MultipleLocator(0.5))
+ax.xaxis.set_major_locator(MultipleLocator(0.2))
+ax.xaxis.set_minor_locator(MultipleLocator(0.1))
 
+ax2 = ax.twiny()
+ax2.set_xbound(ax.get_xbound()[0],ax.get_xbound()[1])
+
+pace_locators = np.arange(180,300,10)
+
+ax2.xaxis.set_major_locator(FixedLocator(pace_to_speed(0,pace_locators)))
+ax2.set_xlabel("Tempo [min/km]")
+ax2.xaxis.set_major_formatter(f)
+plt.xticks(rotation=45)
                                                              
 plt.show()
+#%%
 
-#load test data from file, what would be an appropriate format?
+# load test data from yaml file. This works very easily and is beatifull :-)
+test_file = open('C:/Python/lactate-analysis/data/tests.yaml')
+test_data = yaml.load(test_file)
+# the test data are now accessible as dictionaries
+
+tests = []
+
+for t in test_data:
+    
+    speed = pace_to_speed(np.array(t['pace']))
+    lactate = np.array(t['lactate'])
+    
+    tests.append(StepTest(speed,lactate,t['date']))
+   
+for st in tests: # the constructor is not yet perfect, so call:
+    st.fit_curve()
+#%%   
+    
+#curve_v = np.arange(min(v),max(v),0.05)
+#curve = lactate_curve_function(curve_v,popt[0], popt[1], popt[2])
+
+f = FuncFormatter(pace_formatter)
+
+fig, ax = plt.subplots()
+ax.set_xlabel("Geschwindigkeit [m/s]")
+ax.set_ylabel("Laktat [mmol/l]")
+
+for st in tests:   
+    
+    ax.plot(st.speed,st.lactate,'-o', linewidth = 2, label = st.date)
+    #ax.plot(curve_v, curve, linewidth = 2)
+    #popt, pcov = sp.optimize.curve_fit(lactate_curve_function, v, l)
+    #curve_v = np.arange(min(v),max(v),0.05)
+    #curve = lactate_curve_function(curve_v,popt[0], popt[1], popt[2])
+    
+ax.xaxis.set_major_locator(MultipleLocator(0.2))
+ax.xaxis.set_minor_locator(MultipleLocator(0.1))
+
+plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.) 
+   
+ax2 = ax.twiny()
+ax2.set_xbound(ax.get_xbound()[0],ax.get_xbound()[1])
+
+pace_locators = np.arange(180,300,10)
+
+ax2.xaxis.set_major_locator(FixedLocator(pace_to_speed(0,pace_locators)))
+ax2.set_xlabel("Tempo [min/km]")
+ax2.xaxis.set_major_formatter(f)
+plt.xticks(rotation=45)
+                                                                 
+plt.show()
+
+#%%
+
+vl2_list = []
+vl3_list = []
+vl4_list = []
+
+sigma_vl2_list = []
+sigma_vl3_list = []
+sigma_vl4_list = []
+
+for st in tests:   
+
+    vl2, sigma_vl2 = st.get_fixed_threshold(2)
+    vl3, sigma_vl3 = st.get_fixed_threshold(3)   
+    vl4, sigma_vl4 = st.get_fixed_threshold(4)
+
+    vl2_list.append(vl2)
+    vl3_list.append(vl3)
+    vl4_list.append(vl4)
+    
+    sigma_vl2_list.append(sigma_vl2)
+    sigma_vl3_list.append(sigma_vl3)
+    sigma_vl4_list.append(sigma_vl4)
+
+fig, ax = plt.subplots()
+ax.set_ylabel("Geschwindigkeit [m/s]")
+ax.set_xlabel("Test")
+    
+plt.errorbar(np.arange(1,7,1),vl2_list, xerr=0, yerr=sigma_vl2_list, fmt='-o', color='green', label='vl2 (AT)') 
+plt.errorbar(np.arange(1,7,1),vl3_list, xerr=0, yerr=sigma_vl3_list, fmt='-o', color='orange', label='vl3')
+plt.errorbar(np.arange(1,7,1),vl4_list, xerr=0, yerr=sigma_vl4_list, fmt='-o', color='red', label='vl4 (AnT)')  
+
+plt.legend(bbox_to_anchor=(1.15, 1), loc=2, borderaxespad=0.)
+plt.title('Schwellenentwicklung')
+
+ax.set_xbound(ax.get_xbound()[0]-1,ax.get_xbound()[1]+1)
+
+ay2 = ax.twinx()
+ay2.set_ybound(ax.get_ybound()[0],ax.get_ybound()[1])
+
+pace_locators = np.arange(180,300,5)
+
+ay2.yaxis.set_major_locator(FixedLocator(pace_to_speed(0,pace_locators)))
+ay2.set_ylabel("Tempo [min/km]")
+ay2.yaxis.set_major_formatter(f)    
+    
+plt.show()
