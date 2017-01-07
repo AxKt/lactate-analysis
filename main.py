@@ -53,6 +53,8 @@ v = pace_to_speed(v)
 #[4.8, 4.3, 3.88, 3.52, 3.35]
 #v.astype("timedelta64")
 
+#sdfdhakjgalwgfwelhfgewALFHJG
+
 l = np.array([0.89, 1.28, 2.1, 4.8, 7.6])
 #l = np.array([1.1, 1.48, 2.1, 3.83, 6.34])
 #import step_test
