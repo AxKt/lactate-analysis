@@ -16,6 +16,8 @@ import datetime as dt
 import math
 import yaml
 
+from test_protocols.step_test import StepTest
+
 from matplotlib.ticker import MultipleLocator, FixedLocator, FormatStrFormatter, FuncFormatter
 
 #seaborn
@@ -44,7 +46,7 @@ def pace_formatter(speed, pos = []): # second argument needed for plot formatter
     seconds = fractional_minutes * 60
     return '{mm}:{ss:02d}'.format(mm = int(minutes), ss = int(round(seconds,1))) 
         
-    
+#%%    
 v = np.array([4.8, 4.3, 3.88, 3.52, 3.35])
 v = pace_to_speed(v)
 #v_in_mins = np.array([dt.timedelta(minutes = 4.8), dt.timedelta(minutes = 4.3), dt.timedelta(minutes = 3.88), dt.timedelta(minutes = 3.52), dt.timedelta(minutes = 3.35)], dtype = dt.timedelta) 
@@ -150,11 +152,15 @@ pace_locators = np.arange(180,300,10)
 ax2.xaxis.set_major_locator(FixedLocator(pace_to_speed(0,pace_locators)))
 ax2.set_xlabel("Tempo [min/km]")
 ax2.xaxis.set_major_formatter(f)
+ax2.grid(axis='x')
+ax.grid(axis='y')
 plt.xticks(rotation=45)
                                                                  
 plt.show()
 
 #%%
+
+import matplotlib.dates as mdates
 
 vl2_list = []
 vl3_list = []
@@ -164,8 +170,12 @@ sigma_vl2_list = []
 sigma_vl3_list = []
 sigma_vl4_list = []
 
+date_list = []
+
 for st in tests:   
 
+    date_list.append(st.date)
+    
     vl2, sigma_vl2 = st.get_fixed_threshold(2)
     vl3, sigma_vl3 = st.get_fixed_threshold(3)   
     vl4, sigma_vl4 = st.get_fixed_threshold(4)
@@ -178,26 +188,33 @@ for st in tests:
     sigma_vl3_list.append(sigma_vl3)
     sigma_vl4_list.append(sigma_vl4)
 
+date_list = mdates.date2num(date_list)    
+    
 fig, ax = plt.subplots()
 ax.set_ylabel("Geschwindigkeit [m/s]")
-ax.set_xlabel("Test")
-    
-plt.errorbar(np.arange(1,7,1),vl2_list, xerr=0, yerr=sigma_vl2_list, fmt='-o', color='green', label='vl2 (AT)') 
-plt.errorbar(np.arange(1,7,1),vl3_list, xerr=0, yerr=sigma_vl3_list, fmt='-o', color='orange', label='vl3')
-plt.errorbar(np.arange(1,7,1),vl4_list, xerr=0, yerr=sigma_vl4_list, fmt='-o', color='red', label='vl4 (AnT)')  
+ax.xaxis_date()
+
+plt.errorbar(date_list, vl2_list, xerr=0, yerr=sigma_vl2_list, fmt='-o', color='green', label='vl2 (AT)') 
+plt.errorbar(date_list, vl3_list, xerr=0, yerr=sigma_vl3_list, fmt='-o', color='orange', label='vl3')
+plt.errorbar(date_list, vl4_list, xerr=0, yerr=sigma_vl4_list, fmt='-o', color='red', label='vl4 (AnT)')  
+
+ax.xaxis.set_major_locator(FixedLocator(date_list))
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+plt.xticks(rotation=45)
 
 plt.legend(bbox_to_anchor=(1.15, 1), loc=2, borderaxespad=0.)
 plt.title('Schwellenentwicklung')
 
-ax.set_xbound(ax.get_xbound()[0]-1,ax.get_xbound()[1]+1)
-
+pace_locators = np.arange(180,300,5)
 ay2 = ax.twinx()
 ay2.set_ybound(ax.get_ybound()[0],ax.get_ybound()[1])
-
-pace_locators = np.arange(180,300,5)
-
 ay2.yaxis.set_major_locator(FixedLocator(pace_to_speed(0,pace_locators)))
 ay2.set_ylabel("Tempo [min/km]")
-ay2.yaxis.set_major_formatter(f)    
+ay2.yaxis.set_major_formatter(f)  
+
+ay2.grid(axis='y')
+ax.grid(axis='x')  
+
+#ay2.grid(True)
     
 plt.show()
